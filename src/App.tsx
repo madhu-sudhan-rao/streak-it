@@ -198,7 +198,7 @@ const App: React.FC = () => {
     return (
       <div className="contribution-graph">
         <div className="weekdays">
-          {weekdays.map((day, i) => (i % 2 === 1 ? <div key={day}>{day}</div> : <div key={day}></div>))}
+          {weekdays.map((day) =><div key={day}>{day}</div>)}
         </div>
         <div className="months-container">
           <div className="months">{months.map((m) => <div key={m}>{m}</div>)}</div>
