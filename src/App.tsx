@@ -26,6 +26,7 @@ const App: React.FC = () => {
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] = React.useState<Record<number, string>>({});
 
   // Save streaks to localStorage whenever streaks change
   useEffect(() => {
@@ -162,17 +163,60 @@ const App: React.FC = () => {
 
         if (isFuture || isBeforeYearStart) {
           className += ' future';
-          title = `${title} - Not applicable`;
+          title = `You have to complete this on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         } else if (isCompleted) {
           className += ' completed level-4';
-          title += ' - Completed!';
+          title = `Did it on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         } else {
-          title += ' - No activity';
+          title = `Missed on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         }
 
         cells.push(<div key={`${week}-${day}`} className={className} title={title} />);
       }
     }
+
+    const onCellClick = (e: React.MouseEvent<HTMLDivElement>, streak: Streak) => {
+      const target = e.target as HTMLDivElement;
+
+      if (!target || !target.title) return;
+
+      // Split title by spaces
+      const parts = target.title.split(' ');
+      console.log(parts);
+
+      // Safely get the last 2 words
+      if (parts.length < 2) {
+        console.warn('Title does not have enough parts to extract date');
+        return;
+      }
+
+      const datePart = parts.slice(-2).join(' '); // Join last two parts to get date
+
+      if (datePart) {
+        let infoString = '';
+        // if target has completed className, then set text to Did it on datePart
+        if (target.className.includes('completed')) {
+          infoString = `Did it on ${datePart}`;
+
+
+        } else if (target.className.includes('future')) {
+          infoString = `You have to complete this on ${datePart}`;
+        } else {
+          // if target has missed className, then set text to Missed on datePart
+          infoString = `Missed on ${datePart}`;
+        }
+
+        setSelectedCellInfoByStreak(prev => ({
+          ...prev,
+          [streak.id]: infoString,  // e.g. 'Did it on ...'
+        }));
+        
+      } else {
+        console.warn('Date part not found in title attribute');
+      }
+
+    };
+
 
     return (
       <div className="contribution-graph">
@@ -181,11 +225,12 @@ const App: React.FC = () => {
         </div>
         <div className="months-container">
           <div className="months">{months.map((m) => <div key={m}>{m}</div>)}</div>
-          <div className="days-grid">{cells}</div>
+          <div className="days-grid" onClick={(e) => onCellClick(e, streak)}  >{cells}</div>
         </div>
       </div>
     );
   };
+
 
   return (
       <>
@@ -238,9 +283,12 @@ const App: React.FC = () => {
                 return (
                   <article key={streak.id} className="streak-card" aria-live="polite" aria-atomic="true">
                     <div className="streak-header">
-                      <div>
+                      <div >
                         <div className="streak-title">{streak.name}</div>
-                        {streak.description && <div className="streak-description">{streak.description}</div>}
+                        {/* {streak.description && <div className="streak-description">{streak.description}</div>} */}
+                        {selectedCellInfoByStreak[streak.id] && (
+                          <div className="streak-description">{selectedCellInfoByStreak[streak.id]}</div>
+                        )}
                       </div>
     
                       <div className="streak-count" aria-label={`${streak.count} streak completions`}>
