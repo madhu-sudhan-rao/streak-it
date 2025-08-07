@@ -1,24 +1,6 @@
 import React, { useState, useEffect, type JSX } from 'react';
-
-// Types for streak
-export interface Streak {
-  id: number;
-  name: string;
-  description?: string;
-  count: number;
-  createdDate: string; // stored as date string
-  lastCompleted: string | null; // date string or null
-  completedDates: string[]; // array of date strings
-}
-
-// Helper to get Indian formatted date string (without time)
-const formatDateIN = (date: Date): string => {
-  return date.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-};
+import Header from './components/Header/Header';
+import type { Streak } from './models/streak.model';
 
 // Helper to get date string for storage & comparison
 const getDateString = (date: Date) => date.toDateString();
@@ -40,24 +22,17 @@ const App: React.FC = () => {
 
   // State
   const [streaks, setStreaks] = useState<Streak[]>(loadStreaks);
-  const [currentDate, setCurrentDate] = useState(formatDateIN(new Date()));
 
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] = React.useState<Record<number, string>>({});
 
   // Save streaks to localStorage whenever streaks change
   useEffect(() => {
     localStorage.setItem('streaks', JSON.stringify(streaks));
   }, [streaks]);
 
-  // Update date every hour
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentDate(formatDateIN(new Date()));
-    }, 60 * 60 * 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Add new streak handler
   function handleAddStreak(e: React.FormEvent) {
@@ -159,9 +134,14 @@ const App: React.FC = () => {
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
     const today = new Date();
-    const startDate = new Date(today);
-    // 53 weeks ago + adjustment for week start (Sunday)
-    startDate.setDate(today.getDate() - (53 * 7) + (7 - today.getDay()));
+    const startOfYear = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+
+    // Calculate how many days to go back to previous Sunday (week starts on Sunday)
+    const dayOfWeek = startOfYear.getDay(); // 0=Sunday, 1=Monday,... 6=Saturday
+    const diffToSunday = dayOfWeek; // If Jan 1 is Sunday, diffToSunday=0; else days back to Sunday
+
+    const startDate = new Date(startOfYear);
+    startDate.setDate(startOfYear.getDate() - diffToSunday);
 
     const completedSet = new Set(streak.completedDates.map((d) => new Date(d).toDateString()));
 
@@ -169,160 +149,201 @@ const App: React.FC = () => {
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const cells: JSX.Element[] = [];
-    for (let week = 0; week < 53; week++) {
-      for (let day = 0; day < 7; day++) {
+    for (let day = 0; day < 7; day++) {
+      for (let week = 0; week < 53; week++) {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + week * 7 + day);
 
         const isCompleted = completedSet.has(currentDate.toDateString());
         const isFuture = currentDate > today;
-        const isBeforeCreation = currentDate < new Date(streak.createdDate);
+        const isBeforeYearStart = currentDate < startOfYear;
 
         let className = 'day-cell';
         let title = currentDate.toDateString();
 
-        if (isFuture || isBeforeCreation) {
+        if (isFuture || isBeforeYearStart) {
           className += ' future';
-          title = `${title} - Not applicable`;
+          title = `You have to complete this on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         } else if (isCompleted) {
           className += ' completed level-4';
-          title += ' - Completed!';
+          title = `Did it on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         } else {
-          title += ' - No activity';
+          title = `Missed on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         }
 
         cells.push(<div key={`${week}-${day}`} className={className} title={title} />);
       }
     }
 
+    const onCellClick = (e: React.MouseEvent<HTMLDivElement>, streak: Streak) => {
+      const target = e.target as HTMLDivElement;
+
+      if (!target || !target.title) return;
+
+      // Split title by spaces
+      const parts = target.title.split(' ');
+      console.log(parts);
+
+      // Safely get the last 2 words
+      if (parts.length < 2) {
+        console.warn('Title does not have enough parts to extract date');
+        return;
+      }
+
+      const datePart = parts.slice(-2).join(' '); // Join last two parts to get date
+
+      if (datePart) {
+        let infoString = '';
+        // if target has completed className, then set text to Did it on datePart
+        if (target.className.includes('completed')) {
+          infoString = `Did it on ${datePart}`;
+
+
+        } else if (target.className.includes('future')) {
+          infoString = `You have to complete this on ${datePart}`;
+        } else {
+          // if target has missed className, then set text to Missed on datePart
+          infoString = `Missed on ${datePart}`;
+        }
+
+        setSelectedCellInfoByStreak(prev => ({
+          ...prev,
+          [streak.id]: infoString,  // e.g. 'Did it on ...'
+        }));
+        
+      } else {
+        console.warn('Date part not found in title attribute');
+      }
+
+    };
+
+
     return (
       <div className="contribution-graph">
         <div className="weekdays">
-          {weekdays.map((day, i) => (i % 2 === 1 ? <div key={day}>{day}</div> : <div key={day}></div>))}
+          {weekdays.map((day) =><div key={day}>{day}</div>)}
         </div>
         <div className="months-container">
           <div className="months">{months.map((m) => <div key={m}>{m}</div>)}</div>
-          <div className="days-grid">{cells}</div>
+          <div className="days-grid" onClick={(e) => onCellClick(e, streak)}  >{cells}</div>
         </div>
       </div>
     );
   };
 
+
   return (
-    <div className="container">
-      <header className="header" aria-label="App header">
-        <h1>🔥 Streak.it</h1>
-        <p>Build consistency, one day at a time</p>
-      </header>
-
-      <section className="current-date" aria-live="polite" aria-atomic="true">
-        📅 Today is {currentDate}
-      </section>
-
-      <section className="add-streak-form" aria-labelledby="addStreakTitle">
-        <h2 id="addStreakTitle" style={{ marginBottom: '20px', color: '#000', fontWeight: 600, fontSize: '1.125rem' }}>
-          Add New Streak
-        </h2>
-        <form onSubmit={handleAddStreak} noValidate>
-          <div className="form-group">
-            <label htmlFor="streakName">Streak Name</label>
-            <input
-              id="streakName"
-              type="text"
-              placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="streakDescription">Description (Optional)</label>
-            <textarea
-              id="streakDescription"
-              placeholder="Describe your streak goal..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          <button type="submit" className="btn" aria-label="Start new streak">
-            🚀 Start Streak
-          </button>
-        </form>
-      </section>
-
-      {streaks.length === 0 ? (
-        <div className="empty-state" aria-live="polite">
-          <p>No streaks yet! Add your first streak above to get started. 🎯</p>
+      <>
+        <Header />
+        <div className="container" role="main" aria-label="Streak management" style={{ paddingTop: '30px' }}>  
+          <section className="add-streak-form" aria-labelledby="addStreakTitle">
+            <h2 id="addStreakTitle" style={{ marginBottom: '20px', color: '#000', fontWeight: 600, fontSize: '1.125rem' }}>
+              Add New Streak
+            </h2>
+            <form onSubmit={handleAddStreak} noValidate>
+              <div className="form-group">
+                <label htmlFor="streakName">Streak Name</label>
+                <input
+                  id="streakName"
+                  type="text"
+                  placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+              </div>
+    
+              <div className="form-group">
+                <label htmlFor="streakDescription">Description (Optional)</label>
+                <textarea
+                  id="streakDescription"
+                  placeholder="Describe your streak goal..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              </div>
+    
+              <button type="submit" className="btn" aria-label="Start new streak">
+                🚀 Start Streak
+              </button>
+            </form>
+          </section>
+    
+          {streaks.length === 0 ? (
+            <div className="empty-state" aria-live="polite">
+              <p>No streaks yet! Add your first streak above to get started. 🎯</p>
+            </div>
+          ) : (
+            <section className="streaks-container" aria-label="List of streaks">
+              {streaks.map((streak) => {
+                const status = getStreakStatus(streak);
+                const canComplete = streak.lastCompleted !== todayString;
+    
+                return (
+                  <article key={streak.id} className="streak-card" aria-live="polite" aria-atomic="true">
+                    <div className="streak-header">
+                      <div >
+                        <div className="streak-title">{streak.name}</div>
+                        {/* {streak.description && <div className="streak-description">{streak.description}</div>} */}
+                        {selectedCellInfoByStreak[streak.id] && (
+                          <div className="streak-description">{selectedCellInfoByStreak[streak.id]}</div>
+                        )}
+                      </div>
+    
+                      <div className="streak-count" aria-label={`${streak.count} streak completions`}>
+                        {streak.count} 🔥
+                      </div>
+                    </div>
+    
+                    <div className="streak-progress">
+                      <div className="progress-header">
+                        <div className="progress-title">{streak.completedDates.length} contributions in the last year</div>
+                        <div className="progress-stats">Current streak: {getCurrentStreak(streak)} days</div>
+                      </div>
+                      {renderContributionGraph(streak)}
+                    </div>
+    
+                    <div className="streak-dates">
+                      Started: {new Date(streak.createdDate).toLocaleDateString()}
+                      {streak.lastCompleted ? ` | Last completed: ${new Date(streak.lastCompleted).toLocaleDateString()}` : ''}
+                    </div>
+    
+                    <div className="streak-footer">
+                      <div className={`streak-status ${status.className}`}>
+                        <span className={`status-icon ${status.iconClass}`} />
+                        {status.text}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          className="complete-btn"
+                          onClick={() => completeStreak(streak.id)}
+                          disabled={!canComplete}
+                          aria-label={canComplete ? `Complete streak ${streak.name} today` : `Streak ${streak.name} completed today`}
+                        >
+                          {canComplete ? '✅ Complete Today' : '✅ Completed'}
+                        </button>
+    
+                        <button
+                          className="delete-btn"
+                          onClick={() => {
+                            if (window.confirm(`Delete streak "${streak.name}"? This cannot be undone.`)) {
+                              deleteStreak(streak.id);
+                            }
+                          }}
+                          aria-label={`Delete streak ${streak.name}`}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+          )}
         </div>
-      ) : (
-        <section className="streaks-container" aria-label="List of streaks">
-          {streaks.map((streak) => {
-            const status = getStreakStatus(streak);
-            const canComplete = streak.lastCompleted !== todayString;
-
-            return (
-              <article key={streak.id} className="streak-card" aria-live="polite" aria-atomic="true">
-                <div className="streak-header">
-                  <div>
-                    <div className="streak-title">{streak.name}</div>
-                    {streak.description && <div className="streak-description">{streak.description}</div>}
-                  </div>
-
-                  <div className="streak-count" aria-label={`${streak.count} streak completions`}>
-                    {streak.count} 🔥
-                  </div>
-                </div>
-
-                <div className="streak-progress">
-                  <div className="progress-header">
-                    <div className="progress-title">{streak.completedDates.length} contributions in the last year</div>
-                    <div className="progress-stats">Current streak: {getCurrentStreak(streak)} days</div>
-                  </div>
-                  {renderContributionGraph(streak)}
-                </div>
-
-                <div className="streak-dates">
-                  Started: {new Date(streak.createdDate).toLocaleDateString()}
-                  {streak.lastCompleted ? ` | Last completed: ${new Date(streak.lastCompleted).toLocaleDateString()}` : ''}
-                </div>
-
-                <div className="streak-footer">
-                  <div className={`streak-status ${status.className}`}>
-                    <span className={`status-icon ${status.iconClass}`} />
-                    {status.text}
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      className="complete-btn"
-                      onClick={() => completeStreak(streak.id)}
-                      disabled={!canComplete}
-                      aria-label={canComplete ? `Complete streak ${streak.name} today` : `Streak ${streak.name} completed today`}
-                    >
-                      {canComplete ? '✅ Complete Today' : '✅ Completed'}
-                    </button>
-
-                    <button
-                      className="delete-btn"
-                      onClick={() => {
-                        if (window.confirm(`Delete streak "${streak.name}"? This cannot be undone.`)) {
-                          deleteStreak(streak.id);
-                        }
-                      }}
-                      aria-label={`Delete streak ${streak.name}`}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      )}
-    </div>
+      </>
   );
 };
 

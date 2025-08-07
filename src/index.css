@@ -10,7 +10,6 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   background: #fafafa;
   min-height: 100vh;
-  padding: 20px;
   color: #000;
 }
 
@@ -126,7 +125,7 @@ body {
 .streaks-container {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit,  1fr);
 }
 
 .streak-card {
@@ -250,6 +249,7 @@ body {
 }
 
 .streak-progress {
+  width: 100%;
   margin: 16px 0;
   padding: 16px;
   background: #fafafa;
@@ -294,6 +294,7 @@ body {
 .months-container {
   display: flex;
   flex-direction: column;
+  overflow-x: auto;
 }
 
 .months {
