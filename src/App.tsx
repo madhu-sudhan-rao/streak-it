@@ -159,9 +159,14 @@ const App: React.FC = () => {
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
     const today = new Date();
-    const startDate = new Date(today);
-    // 53 weeks ago + adjustment for week start (Sunday)
-    startDate.setDate(today.getDate() - (53 * 7) + (7 - today.getDay()));
+    const startOfYear = new Date(today.getFullYear(), 0, 1); // January 1st of current year
+
+    // Calculate how many days to go back to previous Sunday (week starts on Sunday)
+    const dayOfWeek = startOfYear.getDay(); // 0=Sunday, 1=Monday,... 6=Saturday
+    const diffToSunday = dayOfWeek; // If Jan 1 is Sunday, diffToSunday=0; else days back to Sunday
+
+    const startDate = new Date(startOfYear);
+    startDate.setDate(startOfYear.getDate() - diffToSunday);
 
     const completedSet = new Set(streak.completedDates.map((d) => new Date(d).toDateString()));
 
@@ -169,19 +174,19 @@ const App: React.FC = () => {
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     const cells: JSX.Element[] = [];
-    for (let week = 0; week < 53; week++) {
-      for (let day = 0; day < 7; day++) {
+    for (let day = 0; day < 7; day++) {
+      for (let week = 0; week < 53; week++) {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + week * 7 + day);
 
         const isCompleted = completedSet.has(currentDate.toDateString());
         const isFuture = currentDate > today;
-        const isBeforeCreation = currentDate < new Date(streak.createdDate);
+        const isBeforeYearStart = currentDate < startOfYear;
 
         let className = 'day-cell';
         let title = currentDate.toDateString();
 
-        if (isFuture || isBeforeCreation) {
+        if (isFuture || isBeforeYearStart) {
           className += ' future';
           title = `${title} - Not applicable`;
         } else if (isCompleted) {
