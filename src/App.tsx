@@ -1,4 +1,5 @@
-import React, { useState, useEffect, type JSX } from 'react';
+import React, { useEffect, useState, type JSX } from 'react';
+import EmojiInput from './components/EmojiInput/EmojiInput';
 import Header from './components/Header/Header';
 import type { Streak } from './models/streak.model';
 
@@ -27,6 +28,7 @@ const App: React.FC = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] = React.useState<Record<number, string>>({});
+  const [emoji, setEmoji] = useState<string | undefined>('🔥');
 
   // Save streaks to localStorage whenever streaks change
   useEffect(() => {
@@ -47,6 +49,7 @@ const App: React.FC = () => {
       createdDate: todayString,
       lastCompleted: null,
       completedDates: [],
+      emoji: emoji || '🔥',   // Set chosen emoji
     };
 
     setStreaks((prev) => [...prev, newStreak]);
@@ -164,25 +167,40 @@ const App: React.FC = () => {
         if (isFuture || isBeforeYearStart) {
           className += ' future';
           title = `You have to complete this on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
+          cells.push(<div key={`${week}-${day}`} className={className} title={title} />)
         } else if (isCompleted) {
-          className += ' completed level-4';
+          
+          cells.push(
+            <div
+              key={`${week}-${day}`}
+              className={`${className} completed`}
+              title={title}
+            >
+              <div className='completed completed-emoji' title={title} style={{ fontSize: '7px', textAlign: 'center' }}  >
+                {streak.emoji || '🔥'}
+              </div>
+            </div>
+          );
           title = `Did it on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         } else {
+          
+          cells.push(
+            <div key={`${week}-${day}`} className={className} title={title} />
+          );
           title = `Missed on ${currentDate.getDate()} ${months[currentDate.getMonth()]}`;
         }
 
-        cells.push(<div key={`${week}-${day}`} className={className} title={title} />);
       }
     }
 
     const onCellClick = (e: React.MouseEvent<HTMLDivElement>, streak: Streak) => {
       const target = e.target as HTMLDivElement;
+      console.log("🚀 ~ onCellClick ~ target:", target)
 
       if (!target || !target.title) return;
 
       // Split title by spaces
       const parts = target.title.split(' ');
-      console.log(parts);
 
       // Safely get the last 2 words
       if (parts.length < 2) {
@@ -231,27 +249,32 @@ const App: React.FC = () => {
     );
   };
 
-
   return (
       <>
         <Header />
-        <div className="container" role="main" aria-label="Streak management" style={{ paddingTop: '30px' }}>  
+        <div className="container" role="main" aria-label="Streak management" style={{ padding: '30px' }}>  
           <section className="add-streak-form" aria-labelledby="addStreakTitle">
             <h2 id="addStreakTitle" style={{ marginBottom: '20px', color: '#000', fontWeight: 600, fontSize: '1.125rem' }}>
               Add New Streak
             </h2>
             <form onSubmit={handleAddStreak} noValidate>
-              <div className="form-group">
-                <label htmlFor="streakName">Streak Name</label>
-                <input
-                  id="streakName"
-                  type="text"
-                  placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoComplete="off"
-                />
+              <div className='form-row'>
+                <div className="form-group">
+                  <label htmlFor="streakName">Streak Name</label>
+                  <input
+                    id="streakName"
+                    type="text"
+                    placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="streakEmoji">Emoji</label>
+                  <EmojiInput value={emoji} onChange={setEmoji} />
+                </div>
               </div>
     
               <div className="form-group">
@@ -263,6 +286,8 @@ const App: React.FC = () => {
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
+
+             
     
               <button type="submit" className="btn" aria-label="Start new streak">
                 🚀 Start Streak
@@ -284,7 +309,11 @@ const App: React.FC = () => {
                   <article key={streak.id} className="streak-card" aria-live="polite" aria-atomic="true">
                     <div className="streak-header">
                       <div >
-                        <div className="streak-title">{streak.name}</div>
+                        {/* <div className="streak-title">{streak.name}</div> */}
+                        <div className="streak-title">
+                          <span style={{ fontSize: '1.2em', marginRight: '6px' }}>{streak.emoji || '🔥'}</span>
+                          {streak.name}
+                        </div>
                         {/* {streak.description && <div className="streak-description">{streak.description}</div>} */}
                         {selectedCellInfoByStreak[streak.id] && (
                           <div className="streak-description">{selectedCellInfoByStreak[streak.id]}</div>

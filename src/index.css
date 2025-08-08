@@ -6,8 +6,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
   background: #fafafa;
   min-height: 100vh;
   color: #000;
@@ -53,7 +54,6 @@ body {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-
 .add-streak-form {
   background: #fff;
   border: 1px solid #eaeaea;
@@ -61,6 +61,12 @@ body {
   padding: 24px;
   margin-bottom: 32px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+form .form-row {
+  display: grid;
+  grid-template-columns: 15fr 1fr;
+  gap: 1rem;
 }
 
 .form-group {
@@ -90,7 +96,7 @@ body {
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #000;
+  border-color: #f4f4f4;
   box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -125,7 +131,7 @@ body {
 .streaks-container {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fit,  1fr);
+  grid-template-columns: repeat(auto-fit, 1fr);
 }
 
 .streak-card {
@@ -191,7 +197,7 @@ body {
 }
 
 .status-completed {
-  color: #00a86b;
+  color: #4caf50;
 }
 
 .status-pending {
@@ -329,9 +335,9 @@ body {
   transform: scale(1.1);
 }
 
-.day-cell.completed {
+/* .day-cell.completed {
   background-color: #40d9ff;
-  border-color: #22d3ee;
+  border-color: #4caf50;
 }
 
 .day-cell.completed.level-1 {
@@ -347,8 +353,8 @@ body {
 }
 
 .day-cell.completed.level-4 {
-  background-color: #3b82f6;
-}
+  background-color: #4caf50;
+} */
 
 .progress-legend {
   display: flex;
@@ -373,11 +379,21 @@ body {
   border: 1px solid #e1e4e8;
 }
 
-.legend-square.level-0 { background-color: #ebedf0; }
-.legend-square.level-1 { background-color: #bfdbfe; }
-.legend-square.level-2 { background-color: #93c5fd; }
-.legend-square.level-3 { background-color: #60a5fa; }
-.legend-square.level-4 { background-color: #3b82f6; }
+.legend-square.level-0 {
+  background-color: #ebedf0;
+}
+.legend-square.level-1 {
+  background-color: #bfdbfe;
+}
+.legend-square.level-2 {
+  background-color: #93c5fd;
+}
+.legend-square.level-3 {
+  background-color: #60a5fa;
+}
+.legend-square.level-4 {
+  background-color: #3b82f6;
+}
 
 .empty-state {
   text-align: center;
