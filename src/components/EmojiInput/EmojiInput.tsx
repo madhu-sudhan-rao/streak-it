@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from "react";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
-import "./EmojiInput.css";
+import { useEffect, useRef, useState } from "react";
 import type { Emoji } from "../../models/emoji.model";
+import "./EmojiInput.css";
 
 // Define the props for the EmojiInput component
 interface EmojiInputProps {
