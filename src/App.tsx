@@ -454,7 +454,7 @@ const App: React.FC = () => {
                             : `Streak ${streak.name} completed today`
                         }
                       >
-                        {canComplete ? "✅ Complete Today" : "✅ Completed"}
+                        {canComplete ? "✅ Done" : "✅ Completed"}
                       </button>
 
                       <button
