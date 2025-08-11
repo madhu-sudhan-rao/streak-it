@@ -1,4 +1,4 @@
-import React from "react";
+import React, { type FormEvent } from "react";
 import "./Header.css";
 import {
   Dialog,
@@ -11,12 +11,12 @@ import EmojiInput from "../EmojiInput/EmojiInput";
 
 // Define the props for the Header component
 interface HeaderProps {
-  handleAddStreak: () => void;
+  handleAddStreak: (e: FormEvent<Element>) => void;
   name: string;
   setName: (name: string) => void;
   description: string;
   setDescription: (description: string) => void;
-  emoji: string;
+  emoji: string | undefined;
   setEmoji: (emoji: string) => void;
 }
 
@@ -30,25 +30,25 @@ const Header: React.FC<HeaderProps> = ({
   setEmoji,
 }: HeaderProps) => {
   // Format date in Indian locale, e.g. "7 August 2025"
-  const getCurrentDateString = () => {
-    const now = new Date();
-    return now.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
+//   const getCurrentDateString = () => {
+//     const now = new Date();
+//     return now.toLocaleDateString("en-IN", {
+//       day: "numeric",
+//       month: "long",
+//       year: "numeric",
+//     });
+//   };
 
-  const [currentDate, setCurrentDate] = React.useState(getCurrentDateString());
+//   const [currentDate, setCurrentDate] = React.useState(getCurrentDateString());
 
-  React.useEffect(() => {
-    // Update every hour (date change is rare)
-    const timer = setInterval(
-      () => setCurrentDate(getCurrentDateString()),
-      3600000
-    );
-    return () => clearInterval(timer);
-  }, []);
+//   React.useEffect(() => {
+//     // Update every hour (date change is rare)
+//     const timer = setInterval(
+//       () => setCurrentDate(getCurrentDateString()),
+//       3600000
+//     );
+//     return () => clearInterval(timer);
+//   }, []);
 
   return (
     <nav className="streakit-navbar">

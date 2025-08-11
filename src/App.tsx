@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import EmojiInput from "./components/EmojiInput/EmojiInput";
 import Header from "./components/Header/Header";
 import type { Streak } from "./models/streak.model";
 
