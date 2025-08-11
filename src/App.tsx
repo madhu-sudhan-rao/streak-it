@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type JSX } from "react";
+import React, { useEffect, useState } from "react";
 import EmojiInput from "./components/EmojiInput/EmojiInput";
 import Header from "./components/Header/Header";
 import type { Streak } from "./models/streak.model";
@@ -27,8 +27,7 @@ const App: React.FC = () => {
   // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] =
-    React.useState<Record<number, string>>({});
+  // const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] = React.useState<Record<number, string>>({});
   const [emoji, setEmoji] = useState<string | undefined>("🔥");
 
   // Save streaks to localStorage whenever streaks change
@@ -179,6 +178,9 @@ const App: React.FC = () => {
     longestStreak = Math.max(longestStreak, currentStreak);
     return longestStreak;
   };
+
+
+
 
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
@@ -354,11 +356,11 @@ const App: React.FC = () => {
                         {streak.name}
                       </div>
                       {/* {streak.description && <div className="streak-description">{streak.description}</div>} */}
-                      {selectedCellInfoByStreak[streak.id] && (
+                      {/* {selectedCellInfoByStreak[streak.id] && (
                         <div className="streak-description">
                           {selectedCellInfoByStreak[streak.id]}
                         </div>
-                      )}
+                      )} */}
                     </div>
 
                     <div
