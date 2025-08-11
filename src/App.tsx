@@ -8,6 +8,52 @@ const getDateString = (date: Date) => date.toDateString();
 const todayString = getDateString(new Date());
 
 const App: React.FC = () => {
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const getMillisecondsTo9PM = () => {
+    const now = new Date();
+    const ninePM = new Date();
+    ninePM.setHours(21, 0, 0, 0); // 9 PM today
+    if (now > ninePM) {
+      // If now is past 9 PM, target is 9 PM tomorrow
+      ninePM.setDate(ninePM.getDate() + 1);
+    }
+    return ninePM.getTime() - now.getTime();
+  };
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const scheduleNotification = () => {
+        new Notification("Streak Reminder", {
+          body: "Don't forget to complete your streak today! 🚀",
+          // icon: "/path-to-icon.png", // optional
+        });
+      };
+
+      const delay = getMillisecondsTo9PM();
+
+      const timeoutId = setTimeout(() => {
+        scheduleNotification();
+
+        // Repeat every 24 hours
+        const intervalId = setInterval(
+          scheduleNotification,
+          24 * 60 * 60 * 1000
+        );
+
+        // Clean up interval on unmount
+        return () => clearInterval(intervalId);
+      }, delay);
+
+      // Clean up timeout on unmount
+      return () => clearTimeout(timeoutId);
+    }
+  }, []);
+
   // Load streaks from localStorage or empty array
   const loadStreaks = (): Streak[] => {
     try {
@@ -178,9 +224,6 @@ const App: React.FC = () => {
     return longestStreak;
   };
 
-
-
-
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
     const today = new Date();
@@ -188,20 +231,38 @@ const App: React.FC = () => {
 
     // Convert completed dates to set for quick lookup
     const completedSet = new Set(
-      streak.completedDates.map(d => new Date(d).toDateString())
+      streak.completedDates.map((d) => new Date(d).toDateString())
     );
 
     const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
 
     // Days count per month (leap year check for Feb)
     const monthDays = [
       31,
       year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28,
-      31, 30, 31, 30,
-      31, 31, 30, 31, 30, 31
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
     ];
 
     const daysNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -212,8 +273,10 @@ const App: React.FC = () => {
           {/* Header Row */}
           <div className="grid-row grid-header">
             <div className="grid-month-label" /> {/* empty top-left */}
-            {daysNumbers.map(dayNum => (
-              <div key={dayNum} className="grid-day-label">{dayNum}</div>
+            {daysNumbers.map((dayNum) => (
+              <div key={dayNum} className="grid-day-label">
+                {dayNum}
+              </div>
             ))}
           </div>
 
@@ -222,9 +285,9 @@ const App: React.FC = () => {
             <div className="grid-row" key={month}>
               {/* Sticky Month Label */}
               <div className="grid-month-label">{month}</div>
-              
+
               {/* Day cells */}
-              {daysNumbers.map(dayNum => {
+              {daysNumbers.map((dayNum) => {
                 if (dayNum > monthDays[mIdx]) {
                   return <div key={dayNum} className="grid-cell empty" />;
                 }
@@ -255,7 +318,7 @@ const App: React.FC = () => {
                     title={title}
                     style={{
                       fontSize: isCompleted ? "1.05em" : undefined,
-                      textAlign: "center"
+                      textAlign: "center",
                     }}
                   >
                     {isCompleted ? streak.emoji || "🔥" : ""}
@@ -271,15 +334,21 @@ const App: React.FC = () => {
 
   return (
     <>
-      <Header handleAddStreak={handleAddStreak} name={name}  setName={setName} description={description} setDescription={setDescription} emoji={emoji} setEmoji={setEmoji}/>
+      <Header
+        handleAddStreak={handleAddStreak}
+        name={name}
+        setName={setName}
+        description={description}
+        setDescription={setDescription}
+        emoji={emoji}
+        setEmoji={setEmoji}
+      />
       <div
         className="container"
         role="main"
         aria-label="Streak management"
         style={{ padding: "30px" }}
       >
- 
-
         {streaks.length === 0 ? (
           <div className="empty-state" aria-live="polite">
             <p>
