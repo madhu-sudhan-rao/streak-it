@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import EmojiInput from "./components/EmojiInput/EmojiInput";
 import Header from "./components/Header/Header";
 import type { Streak } from "./models/streak.model";
 
@@ -272,60 +271,14 @@ const App: React.FC = () => {
 
   return (
     <>
-      <Header />
+      <Header handleAddStreak={handleAddStreak} name={name}  setName={setName} description={description} setDescription={setDescription} emoji={emoji} setEmoji={setEmoji}/>
       <div
         className="container"
         role="main"
         aria-label="Streak management"
         style={{ padding: "30px" }}
       >
-        <section className="add-streak-form" aria-labelledby="addStreakTitle">
-          <h2
-            id="addStreakTitle"
-            style={{
-              marginBottom: "20px",
-              color: "#000",
-              fontWeight: 600,
-              fontSize: "1.125rem",
-            }}
-          >
-            Add New Streak
-          </h2>
-          <form onSubmit={handleAddStreak} noValidate>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="streakName">Streak Name</label>
-                <input
-                  id="streakName"
-                  type="text"
-                  placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoComplete="off"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="streakEmoji">Emoji</label>
-                <EmojiInput value={emoji} onChange={setEmoji} />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="streakDescription">Description (Optional)</label>
-              <textarea
-                id="streakDescription"
-                placeholder="Describe your streak goal..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <button type="submit" className="btn" aria-label="Start new streak">
-              🚀 Start Streak
-            </button>
-          </form>
-        </section>
+ 
 
         {streaks.length === 0 ? (
           <div className="empty-state" aria-live="polite">
