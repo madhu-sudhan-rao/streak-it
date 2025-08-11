@@ -134,6 +134,28 @@ const App: React.FC = () => {
     return currentStreak;
   };
 
+  // Calculate longest streak length in days, and the streak should be continuous
+  // i.e. no gaps in completed dates
+  const getLongestStreak = (streak: Streak) => {
+    if (streak.completedDates.length === 0) return 0;
+    const sortedDates = streak.completedDates
+      .map((d) => new Date(d))
+      .sort((a, b) => a.getTime() - b.getTime());
+    let longestStreak = 0;
+    let currentStreak = 1;
+    for (let i = 1; i < sortedDates.length; i++) {
+      const diff = (sortedDates[i].getTime() - sortedDates[i - 1].getTime()) / (1000 * 3600 * 24);
+      if (diff === 1) {
+        currentStreak++;
+      } else {
+        longestStreak = Math.max(longestStreak, currentStreak);
+        currentStreak = 1; // reset streak
+      }
+    }
+    longestStreak = Math.max(longestStreak, currentStreak);
+    return longestStreak;
+  };
+
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
     const today = new Date();
@@ -320,15 +342,18 @@ const App: React.FC = () => {
                         )}
                       </div>
     
-                      <div className="streak-count" aria-label={`${streak.count} streak completions`}>
-                        {streak.count} 🔥
+                      <div className="streak-count" aria-label={`${getCurrentStreak(streak)} streak completions`}>
+                        {getCurrentStreak(streak)} 🔥
                       </div>
                     </div>
     
                     <div className="streak-progress">
                       <div className="progress-header">
                         <div className="progress-title">{streak.completedDates.length} contributions in the last year</div>
-                        <div className="progress-stats">Current streak: {getCurrentStreak(streak)} days</div>
+                        <div className='progress-stats'>
+                          <div className="progress-count"> <div className='green-rectangle' style={{ width: '10px', height: '10px', backgroundColor: 'green', borderRadius: '3px' }}></div>  Total: {streak.count} days</div>
+                          <div className="progress-count"> <div className='orange-rectangle' style={{ width: '10px', height: '10px', backgroundColor: 'orange', borderRadius: '3px' }}></div>  Longest: {getLongestStreak(streak)} days</div>
+                        </div>
                       </div>
                       {renderContributionGraph(streak)}
                     </div>

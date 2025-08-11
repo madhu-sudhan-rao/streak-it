@@ -277,6 +277,14 @@ form .form-row {
 }
 
 .progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.progress-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.75rem;
   color: #666;
 }
