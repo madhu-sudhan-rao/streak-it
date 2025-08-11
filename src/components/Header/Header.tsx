@@ -1,4 +1,4 @@
-import React, { type FormEvent } from "react";
+import React, { useState, type FormEvent } from "react";
 import "./Header.css";
 import {
   Dialog,
@@ -28,71 +28,50 @@ const Header: React.FC<HeaderProps> = ({
   setDescription,
   emoji,
   setEmoji,
-}: HeaderProps) => {
-  // Format date in Indian locale, e.g. "7 August 2025"
-//   const getCurrentDateString = () => {
-//     const now = new Date();
-//     return now.toLocaleDateString("en-IN", {
-//       day: "numeric",
-//       month: "long",
-//       year: "numeric",
-//     });
-//   };
+}) => {
+  const [open, setOpen] = useState(false);
 
-//   const [currentDate, setCurrentDate] = React.useState(getCurrentDateString());
-
-//   React.useEffect(() => {
-//     // Update every hour (date change is rare)
-//     const timer = setInterval(
-//       () => setCurrentDate(getCurrentDateString()),
-//       3600000
-//     );
-//     return () => clearInterval(timer);
-//   }, []);
+  function onSubmit(e: FormEvent<Element>) {
+    e.preventDefault();
+    handleAddStreak(e);
+    setOpen(false); // close after adding
+  }
 
   return (
     <nav className="streakit-navbar">
       <div className="nav-left">
         <h1>🔥 Streak.it</h1>
       </div>
-      {/* <div className="nav-date">{currentDate}</div> */}
+
       <div className="add-streak-button">
-        <Dialog>
-          <DialogTrigger className="add-streak-trigger" asChild>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
             <Button variant="outline" size="icon" className="add-streak">
               Add Streak
             </Button>
           </DialogTrigger>
+
           <DialogContent>
-            <section
-              className="add-streak-form"
-              aria-labelledby="addStreakTitle"
-            >
-              <h2
-                id="addStreakTitle"
-                style={{
-                  marginBottom: "20px",
-                  color: "#000",
-                  fontWeight: 600,
-                  fontSize: "1.125rem",
-                }}
-              >
+            <section className="add-streak-form" aria-labelledby="addStreakTitle">
+              <h2 id="addStreakTitle" className="dialog-title">
                 Add New Streak
               </h2>
-              <form onSubmit={handleAddStreak} noValidate>
+
+              <form onSubmit={onSubmit} noValidate style={{paddingBottom: "20px"}}>
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="streakName">Streak Name</label>
                     <input
                       id="streakName"
                       type="text"
-                      placeholder="e.g., Morning Workout, Read 30 minutes, Meditate"
+                      placeholder="e.g., Morning Workout"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
                       autoComplete="off"
                     />
                   </div>
+
                   <div className="form-group">
                     <label htmlFor="streakEmoji">Emoji</label>
                     <EmojiInput value={emoji} onChange={setEmoji} />
@@ -100,9 +79,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="streakDescription">
-                    Description (Optional)
-                  </label>
+                  <label htmlFor="streakDescription">Description (Optional)</label>
                   <textarea
                     id="streakDescription"
                     placeholder="Describe your streak goal..."
@@ -110,13 +87,14 @@ const Header: React.FC<HeaderProps> = ({
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
+
+                <DialogFooter>
+                  <button type="submit" className="btn" aria-label="Start new streak">
+                    🚀 Start Streak
+                  </button>
+                </DialogFooter>
               </form>
             </section>
-          <DialogFooter className="dialog-footer">
-            <button type="submit" className="btn" aria-label="Start new streak">
-              🚀 Start Streak
-            </button>
-          </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

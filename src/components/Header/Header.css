@@ -70,6 +70,12 @@
   padding: 18px;
 }
 
+.dialog-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
 @media (max-width: 600px) {
   .nav-left h1 {
     font-size: 1.2rem;
