@@ -59,7 +59,7 @@ const buttonRef = useRef<HTMLButtonElement>(null);
             position: "absolute",
             zIndex: 9999,
             top: "110%",
-            left: "100%",
+            right: "0%",
           }}
         >
           <Picker
