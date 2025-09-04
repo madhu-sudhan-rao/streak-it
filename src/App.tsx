@@ -403,135 +403,169 @@ const App: React.FC = () => {
   const selectedStreak = streaks.find(s => s.id === selectedStreakId) || null;
 
   // Render list view
-  const renderListView = () => (
-    <div className="container" role="main" aria-label="Streak management" style={{ padding: "30px" }}>
-      {streaks.length === 0 ? (
-        <div className="empty-state" aria-live="polite">
-          <p>
-            No streaks yet! Add your first streak above to get started. 🎯
-          </p>
-        </div>
-      ) : (
-        <section className="streaks-list" aria-label="List of streaks">
-          {streaks.map((streak) => {
-            const status = getStreakStatus(streak);
-            const isCompletedToday = streak.lastCompleted === todayString;
-            const weekProgress = getWeekProgress(streak);
-            
-            return (
-              <article
-                key={streak.id}
-                className="streak-list-item"
-                aria-live="polite"
-                aria-atomic="true"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  padding: "15px",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "8px",
-                  marginBottom: "15px",
-                  backgroundColor: "#fff",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
-                  <div 
-                    style={{ 
-                      fontSize: "2em", 
-                      marginRight: "15px",
-                      width: "50px",
-                      textAlign: "center",
-                      cursor: "pointer"
-                    }}
-                    onClick={() => handleStreakClick(streak.id)}
-                  >
-                    {streak.emoji || "🔥"}
-                  </div>
-                  
-                  <div 
-                    style={{ flex: 1, cursor: "pointer" }}
-                    onClick={() => handleStreakClick(streak.id)}
-                  >
-                    <div className="streak-title" style={{ 
-                      fontSize: "1.2em", 
-                      fontWeight: "bold",
-                      marginBottom: "5px"
-                    }}>
-                      {streak.name}
-                    </div>
-                    <div className={`streak-status ${status.className}`} style={{ fontSize: "0.9em" }}>
-                      {status.text}
-                    </div>
-                  </div>
-                  
-                  <div className="streak-count" style={{ 
-                    fontSize: "1.5em", 
+ // Render list view
+const renderListView = () => (
+  <div className="container" role="main" aria-label="Streak management" style={{ padding: "30px" }}>
+    {streaks.length === 0 ? (
+      <div className="empty-state" aria-live="polite">
+        <p>
+          No streaks yet! Add your first streak above to get started. 🎯
+        </p>
+      </div>
+    ) : (
+      <section className="streaks-list" aria-label="List of streaks">
+        {streaks.map((streak) => {
+          const status = getStreakStatus(streak);
+          const isCompletedToday = streak.lastCompleted === todayString;
+          const weekProgress = getWeekProgress(streak);
+          
+          // Define chip styles based on status
+          const chipStyles = {
+            "completed": {
+              backgroundColor: "#e8f5e9",
+              color: "#2e7d32",
+              border: "1px solid #c8e6c9"
+            },
+            "pending": {
+              backgroundColor: "#fff3e0",
+              color: "#ef6c00",
+              border: "1px solid #ffe0b2"
+            },
+            "missed": {
+              backgroundColor: "#ffebee",
+              color: "#c62828",
+              border: "1px solid #ffcdd2"
+            }
+          };
+          
+          const currentChipStyle = chipStyles[status.status] || chipStyles.pending;
+          
+          return (
+            <article
+              key={streak.id}
+              className="streak-list-item"
+              aria-live="polite"
+              aria-atomic="true"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                padding: "15px",
+                border: "1px solid #e0e0e0",
+                borderRadius: "8px",
+                marginBottom: "15px",
+                backgroundColor: "#fff",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                <div 
+                  style={{ 
+                    fontSize: "2em", 
+                    marginRight: "15px",
+                    width: "50px",
+                    textAlign: "center",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => handleStreakClick(streak.id)}
+                >
+                  {streak.emoji || "🔥"}
+                </div>
+                
+                <div 
+                  style={{ flex: 1, cursor: "pointer" }}
+                  onClick={() => handleStreakClick(streak.id)}
+                >
+                  <div className="streak-title" style={{ 
+                    fontSize: "1.2em", 
                     fontWeight: "bold",
-                    color: "#ff6b35",
-                    marginRight: "10px"
+                    marginBottom: "5px"
                   }}>
-                    {getCurrentStreak(streak)} 🔥
+                    {streak.name}
                   </div>
-
-                  {!isCompletedToday && (
-                    <button
-                      className="complete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        completeStreak(streak.id);
-                      }}
-                      aria-label={`Complete streak ${streak.name} today`}
-                      style={{
-                        padding: "8px 12px",
-                        backgroundColor: "#4CAF50",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontSize: "0.9em"
-                      }}
-                    >
-                      ✅ Done
-                    </button>
-                  )}
+                  
+                  {/* Status Chip */}
+                  <div 
+                    className={`streak-status-chip ${status.className}`} 
+                    style={{
+                      display: "inline-block",
+                      padding: "4px 8px",
+                      borderRadius: "16px",
+                      fontSize: "0.65em",
+                      fontWeight: "500",
+                      ...currentChipStyle
+                    }}
+                  >
+                    {status.text}
+                  </div>
+                </div>
+                
+                <div className="streak-count" style={{ 
+                  fontSize: "1.5em", 
+                  fontWeight: "bold",
+                  color: "#ff6b35",
+                  marginRight: "10px"
+                }}>
+                  {getCurrentStreak(streak)} 🔥
                 </div>
 
-                {/* Weekly Progress Bar */}
-                <div style={{ marginTop: "10px" }}>
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    marginBottom: "5px",
-                    fontSize: "0.85em",
-                    color: "#666"
-                  }}>
-                    <span>Week Progress: {weekProgress.completed}/{weekProgress.total}</span>
-                    <span>{weekProgress.percentage}%</span>
-                  </div>
+                {!isCompletedToday && (
+                  <button
+                    className="complete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      completeStreak(streak.id);
+                    }}
+                    aria-label={`Complete streak ${streak.name} today`}
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: "#4CAF50",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "0.9em"
+                    }}
+                  >
+                    ✅ Done
+                  </button>
+                )}
+              </div>
+
+              {/* Weekly Progress Bar */}
+              <div style={{ marginTop: "10px" }}>
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  marginBottom: "5px",
+                  fontSize: "0.85em",
+                  color: "#666"
+                }}>
+                  <span>Week Progress: {weekProgress.completed}/{weekProgress.total}</span>
+                  <span>{weekProgress.percentage}%</span>
+                </div>
+                <div style={{
+                  width: "100%",
+                  height: "8px",
+                  backgroundColor: "#e0e0e0",
+                  borderRadius: "4px",
+                  overflow: "hidden"
+                }}>
                   <div style={{
-                    width: "100%",
-                    height: "8px",
-                    backgroundColor: "#e0e0e0",
-                    borderRadius: "4px",
-                    overflow: "hidden"
-                  }}>
-                    <div style={{
-                      width: `${weekProgress.percentage}%`,
-                      height: "100%",
-                      backgroundColor: weekProgress.percentage === 100 ? "#4CAF50" : 
-                                      weekProgress.percentage >= 50 ? "#FF9800" : "#F44336",
-                      transition: "width 0.3s ease"
-                    }} />
-                  </div>
+                    width: `${weekProgress.percentage}%`,
+                    height: "100%",
+                    backgroundColor: weekProgress.percentage === 100 ? "#4CAF50" : 
+                                    weekProgress.percentage >= 50 ? "#FF9800" : "#F44336",
+                    transition: "width 0.3s ease"
+                  }} />
                 </div>
-              </article>
-            );
-          })}
-        </section>
-      )}
-    </div>
-  );
+              </div>
+            </article>
+          );
+        })}
+      </section>
+    )}
+  </div>
+);
 
   // Render detail view
   const renderDetailView = () => {
