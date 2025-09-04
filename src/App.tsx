@@ -7,6 +7,9 @@ const getDateString = (date: Date) => date.toDateString();
 
 const todayString = getDateString(new Date());
 
+// Define views
+type View = "list" | "detail";
+
 const App: React.FC = () => {
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
@@ -68,11 +71,12 @@ const App: React.FC = () => {
 
   // State
   const [streaks, setStreaks] = useState<Streak[]>(loadStreaks);
+  const [currentView, setCurrentView] = useState<View>("list");
+  const [selectedStreakId, setSelectedStreakId] = useState<number | null>(null);
 
   // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  // const [selectedCellInfoByStreak, setSelectedCellInfoByStreak] = React.useState<Record<number, string>>({});
   const [emoji, setEmoji] = useState<string | undefined>("🔥");
 
   // Save streaks to localStorage whenever streaks change
@@ -120,9 +124,37 @@ const App: React.FC = () => {
     );
   }
 
+  // Uncomplete streak for today only
+  function uncompleteStreak(id: number) {
+    setStreaks((prev) =>
+      prev.map((s) => {
+        if (s.id === id && s.lastCompleted === todayString) {
+          // Remove today from completed dates
+          const updatedCompletedDates = s.completedDates.filter(
+            date => date !== todayString
+          );
+          
+          return {
+            ...s,
+            count: Math.max(0, s.count - 1),
+            lastCompleted: updatedCompletedDates.length > 0 
+              ? updatedCompletedDates[updatedCompletedDates.length - 1] 
+              : null,
+            completedDates: updatedCompletedDates,
+          };
+        }
+        return s;
+      })
+    );
+  }
+
   // Delete streak handler
   function deleteStreak(id: number) {
     setStreaks((prev) => prev.filter((s) => s.id !== id));
+    if (selectedStreakId === id) {
+      setSelectedStreakId(null);
+      setCurrentView("list");
+    }
   }
 
   // Get yesterday string
@@ -222,6 +254,29 @@ const App: React.FC = () => {
     }
     longestStreak = Math.max(longestStreak, currentStreak);
     return longestStreak;
+  };
+
+  // Get current week progress for a streak
+  const getWeekProgress = (streak: Streak) => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday as start of week
+    
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      weekDates.push(getDateString(date));
+    }
+    
+    const completedSet = new Set(streak.completedDates);
+    const completedThisWeek = weekDates.filter(date => completedSet.has(date));
+    
+    return {
+      completed: completedThisWeek.length,
+      total: weekDates.length,
+      percentage: Math.round((completedThisWeek.length / weekDates.length) * 100)
+    };
   };
 
   // Render contribution graph for a streak
@@ -332,6 +387,300 @@ const App: React.FC = () => {
     );
   };
 
+  // Handle streak click to show detail view
+  const handleStreakClick = (streakId: number) => {
+    setSelectedStreakId(streakId);
+    setCurrentView("detail");
+  };
+
+  // Handle back to list view
+  const handleBackToList = () => {
+    setCurrentView("list");
+    setSelectedStreakId(null);
+  };
+
+  // Get the selected streak from the streaks array
+  const selectedStreak = streaks.find(s => s.id === selectedStreakId) || null;
+
+  // Render list view
+  const renderListView = () => (
+    <div className="container" role="main" aria-label="Streak management" style={{ padding: "30px" }}>
+      {streaks.length === 0 ? (
+        <div className="empty-state" aria-live="polite">
+          <p>
+            No streaks yet! Add your first streak above to get started. 🎯
+          </p>
+        </div>
+      ) : (
+        <section className="streaks-list" aria-label="List of streaks">
+          {streaks.map((streak) => {
+            const status = getStreakStatus(streak);
+            const isCompletedToday = streak.lastCompleted === todayString;
+            const weekProgress = getWeekProgress(streak);
+            
+            return (
+              <article
+                key={streak.id}
+                className="streak-list-item"
+                aria-live="polite"
+                aria-atomic="true"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  padding: "15px",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: "8px",
+                  marginBottom: "15px",
+                  backgroundColor: "#fff",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                  <div 
+                    style={{ 
+                      fontSize: "2em", 
+                      marginRight: "15px",
+                      width: "50px",
+                      textAlign: "center",
+                      cursor: "pointer"
+                    }}
+                    onClick={() => handleStreakClick(streak.id)}
+                  >
+                    {streak.emoji || "🔥"}
+                  </div>
+                  
+                  <div 
+                    style={{ flex: 1, cursor: "pointer" }}
+                    onClick={() => handleStreakClick(streak.id)}
+                  >
+                    <div className="streak-title" style={{ 
+                      fontSize: "1.2em", 
+                      fontWeight: "bold",
+                      marginBottom: "5px"
+                    }}>
+                      {streak.name}
+                    </div>
+                    <div className={`streak-status ${status.className}`} style={{ fontSize: "0.9em" }}>
+                      {status.text}
+                    </div>
+                  </div>
+                  
+                  <div className="streak-count" style={{ 
+                    fontSize: "1.5em", 
+                    fontWeight: "bold",
+                    color: "#ff6b35",
+                    marginRight: "10px"
+                  }}>
+                    {getCurrentStreak(streak)} 🔥
+                  </div>
+
+                  {!isCompletedToday && (
+                    <button
+                      className="complete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        completeStreak(streak.id);
+                      }}
+                      aria-label={`Complete streak ${streak.name} today`}
+                      style={{
+                        padding: "8px 12px",
+                        backgroundColor: "#4CAF50",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "0.9em"
+                      }}
+                    >
+                      ✅ Done
+                    </button>
+                  )}
+                </div>
+
+                {/* Weekly Progress Bar */}
+                <div style={{ marginTop: "10px" }}>
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    marginBottom: "5px",
+                    fontSize: "0.85em",
+                    color: "#666"
+                  }}>
+                    <span>Week Progress: {weekProgress.completed}/{weekProgress.total}</span>
+                    <span>{weekProgress.percentage}%</span>
+                  </div>
+                  <div style={{
+                    width: "100%",
+                    height: "8px",
+                    backgroundColor: "#e0e0e0",
+                    borderRadius: "4px",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{
+                      width: `${weekProgress.percentage}%`,
+                      height: "100%",
+                      backgroundColor: weekProgress.percentage === 100 ? "#4CAF50" : 
+                                      weekProgress.percentage >= 50 ? "#FF9800" : "#F44336",
+                      transition: "width 0.3s ease"
+                    }} />
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
+    </div>
+  );
+
+  // Render detail view
+  const renderDetailView = () => {
+    if (!selectedStreak) return null;
+    
+    const status = getStreakStatus(selectedStreak);
+    const isCompletedToday = selectedStreak.lastCompleted === todayString;
+    const canComplete = !isCompletedToday;
+
+    return (
+      <div className="container" role="main" aria-label="Streak detail" style={{ padding: "30px" }}>
+        <button 
+          onClick={handleBackToList}
+          style={{
+            marginBottom: "20px",
+            padding: "8px 16px",
+            backgroundColor: "#f0f0f0",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            cursor: "pointer"
+          }}
+        >
+          ← Back to List
+        </button>
+        
+        <article className="streak-card" aria-live="polite" aria-atomic="true">
+          <div className="streak-header">
+            <div>
+              <div className="streak-title">
+                <span style={{ fontSize: "1.5em", marginRight: "10px" }}>
+                  {selectedStreak.emoji || "🔥"}
+                </span>
+                {selectedStreak.name}
+              </div>
+              {selectedStreak.description && (
+                <div className="streak-description" style={{ marginTop: "10px" }}>
+                  {selectedStreak.description}
+                </div>
+              )}
+            </div>
+
+            <div
+              className="streak-count"
+              aria-label={`${getCurrentStreak(selectedStreak)} streak completions`}
+              style={{ fontSize: "1.8em" }}
+            >
+              {getCurrentStreak(selectedStreak)} 🔥
+            </div>
+          </div>
+
+          <div className="streak-progress">
+            <div className="progress-header">
+              <div className="progress-stats">
+                <div className="progress-count">
+                  {" "}
+                  <div
+                    className="green-rectangle"
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      backgroundColor: "green",
+                      borderRadius: "3px",
+                      display: "inline-block",
+                      marginRight: "5px"
+                    }}
+                  ></div>{" "}
+                  Total: {selectedStreak.count} days
+                </div>
+                <div className="progress-count">
+                  {" "}
+                  <div
+                    className="orange-rectangle"
+                    style={{
+                      width: "10px",
+                      height: "10px",
+                      backgroundColor: "orange",
+                      borderRadius: "3px",
+                      display: "inline-block",
+                      marginRight: "5px"
+                    }}
+                  ></div>{" "}
+                  Longest: {getLongestStreak(selectedStreak)} days
+                </div>
+              </div>
+            </div>
+            {renderContributionGraph(selectedStreak)}
+          </div>
+
+          <div className="streak-dates">
+            Started: {new Date(selectedStreak.createdDate).toLocaleDateString()}
+            {selectedStreak.lastCompleted
+              ? ` | Last completed: ${new Date(
+                  selectedStreak.lastCompleted
+                ).toLocaleDateString()}`
+              : ""}
+          </div>
+
+          <div className="streak-footer">
+            <div className={`streak-status ${status.className}`}>
+              <span className={`status-icon ${status.iconClass}`} />
+              {status.text}
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              {isCompletedToday ? (
+                <button
+                  className="uncomplete-btn"
+                  onClick={() => uncompleteStreak(selectedStreak.id)}
+                  aria-label={`Uncomplete streak ${selectedStreak.name} for today`}
+                  style={{ backgroundColor: "#ffebee", color: "#c62828" }}
+                >
+                  ↩️ Undo Today
+                </button>
+              ) : (
+                <button
+                  className="complete-btn"
+                  onClick={() => completeStreak(selectedStreak.id)}
+                  disabled={!canComplete}
+                  aria-label={
+                    canComplete
+                      ? `Complete streak ${selectedStreak.name} today`
+                      : `Streak ${selectedStreak.name} completed today`
+                  }
+                >
+                  ✅ Done
+                </button>
+              )}
+
+              <button
+                className="delete-btn"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete streak "${selectedStreak.name}"? This cannot be undone.`
+                    )
+                  ) {
+                    deleteStreak(selectedStreak.id);
+                  }
+                }}
+                aria-label={`Delete streak ${selectedStreak.name}`}
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    );
+  };
+
   return (
     <>
       <Header
@@ -343,143 +692,7 @@ const App: React.FC = () => {
         emoji={emoji}
         setEmoji={setEmoji}
       />
-      <div
-        className="container"
-        role="main"
-        aria-label="Streak management"
-        style={{ padding: "30px" }}
-      >
-        {streaks.length === 0 ? (
-          <div className="empty-state" aria-live="polite">
-            <p>
-              No streaks yet! Add your first streak above to get started. 🎯
-            </p>
-          </div>
-        ) : (
-          <section className="streaks-container" aria-label="List of streaks">
-            {streaks.map((streak) => {
-              const status = getStreakStatus(streak);
-              const canComplete = streak.lastCompleted !== todayString;
-
-              return (
-                <article
-                  key={streak.id}
-                  className="streak-card"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  <div className="streak-header">
-                    <div>
-                      {/* <div className="streak-title">{streak.name}</div> */}
-                      <div className="streak-title">
-                        <span style={{ fontSize: "1.2em", marginRight: "6px" }}>
-                          {streak.emoji || "🔥"}
-                        </span>
-                        {streak.name}
-                      </div>
-                      {/* {streak.description && <div className="streak-description">{streak.description}</div>} */}
-                      {/* {selectedCellInfoByStreak[streak.id] && (
-                        <div className="streak-description">
-                          {selectedCellInfoByStreak[streak.id]}
-                        </div>
-                      )} */}
-                    </div>
-
-                    <div
-                      className="streak-count"
-                      aria-label={`${getCurrentStreak(
-                        streak
-                      )} streak completions`}
-                    >
-                      {getCurrentStreak(streak)} 🔥
-                    </div>
-                  </div>
-
-                  <div className="streak-progress">
-                    <div className="progress-header">
-                      <div className="progress-stats">
-                        <div className="progress-count">
-                          {" "}
-                          <div
-                            className="green-rectangle"
-                            style={{
-                              width: "10px",
-                              height: "10px",
-                              backgroundColor: "green",
-                              borderRadius: "3px",
-                            }}
-                          ></div>{" "}
-                          Total: {streak.count} days
-                        </div>
-                        <div className="progress-count">
-                          {" "}
-                          <div
-                            className="orange-rectangle"
-                            style={{
-                              width: "10px",
-                              height: "10px",
-                              backgroundColor: "orange",
-                              borderRadius: "3px",
-                            }}
-                          ></div>{" "}
-                          Longest: {getLongestStreak(streak)} days
-                        </div>
-                      </div>
-                    </div>
-                    {renderContributionGraph(streak)}
-                  </div>
-
-                  <div className="streak-dates">
-                    Started: {new Date(streak.createdDate).toLocaleDateString()}
-                    {streak.lastCompleted
-                      ? ` | Last completed: ${new Date(
-                          streak.lastCompleted
-                        ).toLocaleDateString()}`
-                      : ""}
-                  </div>
-
-                  <div className="streak-footer">
-                    <div className={`streak-status ${status.className}`}>
-                      <span className={`status-icon ${status.iconClass}`} />
-                      {status.text}
-                    </div>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                      <button
-                        className="complete-btn"
-                        onClick={() => completeStreak(streak.id)}
-                        disabled={!canComplete}
-                        aria-label={
-                          canComplete
-                            ? `Complete streak ${streak.name} today`
-                            : `Streak ${streak.name} completed today`
-                        }
-                      >
-                        {canComplete ? "✅ Done" : "✅ Completed"}
-                      </button>
-
-                      <button
-                        className="delete-btn"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete streak "${streak.name}"? This cannot be undone.`
-                            )
-                          ) {
-                            deleteStreak(streak.id);
-                          }
-                        }}
-                        aria-label={`Delete streak ${streak.name}`}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </section>
-        )}
-      </div>
+      {currentView === "list" ? renderListView() : renderDetailView()}
     </>
   );
 };
