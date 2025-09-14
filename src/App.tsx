@@ -394,7 +394,7 @@ const App: React.FC = () => {
                       }}
                       aria-label={`Complete streak ${streak.name} today`}
                     >
-                      ✅ Done
+                      Done
                     </button>
                   ) : (
                     <div className="btn-spacer"></div>
@@ -483,7 +483,7 @@ const App: React.FC = () => {
                   onClick={() => uncompleteStreak(selectedStreak.id)}
                   aria-label={`Undo completion for ${selectedStreak.name}`}
                 >
-                  ↩️ Undo Today
+                  Undo Today
                 </button>
               ) : (
                 <button
@@ -491,7 +491,7 @@ const App: React.FC = () => {
                   onClick={() => completeStreak(selectedStreak.id)}
                   aria-label={`Complete streak ${selectedStreak.name} today`}
                 >
-                  ✅ Done
+                  Done
                 </button>
               )}
 
@@ -504,7 +504,7 @@ const App: React.FC = () => {
                 }}
                 aria-label={`Delete streak ${selectedStreak.name}`}
               >
-                🗑️ Delete
+                Delete
               </button>
             </div>
           </div>
