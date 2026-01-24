@@ -41,7 +41,10 @@ const App: React.FC = () => {
 
       const timeoutId = setTimeout(() => {
         scheduleNotification();
-        const intervalId = setInterval(scheduleNotification, 24 * 60 * 60 * 1000);
+        const intervalId = setInterval(
+          scheduleNotification,
+          24 * 60 * 60 * 1000,
+        );
         return () => clearInterval(intervalId);
       }, delay);
 
@@ -102,7 +105,9 @@ const App: React.FC = () => {
     setStreaks((prev) =>
       prev.map((s) => {
         if (s.id === id) {
-          if (s.lastCompleted === todayString) return s;
+          if (s.lastCompleted === todayString) {
+            uncompleteStreak(id)
+          }
           return {
             ...s,
             count: s.count + 1,
@@ -111,7 +116,7 @@ const App: React.FC = () => {
           };
         }
         return s;
-      })
+      }),
     );
   }
 
@@ -119,7 +124,7 @@ const App: React.FC = () => {
   function completeYesterdayStreak(id: number) {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayString = yesterday.toISOString().split("T")[0];
+    const yesterdayString = getDateString(yesterday);
 
     setStreaks((prev) =>
       prev.map((s) => {
@@ -141,26 +146,26 @@ const App: React.FC = () => {
     );
   }
 
-
   // Uncomplete streak for today only
   function uncompleteStreak(id: number) {
     setStreaks((prev) =>
       prev.map((s) => {
         if (s.id === id && s.lastCompleted === todayString) {
           const updatedCompletedDates = s.completedDates.filter(
-            date => date !== todayString
+            (date) => date !== todayString,
           );
           return {
             ...s,
             count: Math.max(0, s.count - 1),
-            lastCompleted: updatedCompletedDates.length > 0 
-              ? updatedCompletedDates[updatedCompletedDates.length - 1] 
-              : null,
+            lastCompleted:
+              updatedCompletedDates.length > 0
+                ? updatedCompletedDates[updatedCompletedDates.length - 1]
+                : null,
             completedDates: updatedCompletedDates,
           };
         }
         return s;
-      })
+      }),
     );
   }
 
@@ -233,7 +238,7 @@ const App: React.FC = () => {
 
     for (const completedDate of sortedDates) {
       const daysDiff = Math.floor(
-        (checkDate.getTime() - completedDate.getTime()) / (1000 * 3600 * 24)
+        (checkDate.getTime() - completedDate.getTime()) / (1000 * 3600 * 24),
       );
       if (daysDiff === 0 || daysDiff === 1) {
         currentStreak++;
@@ -256,7 +261,9 @@ const App: React.FC = () => {
     let longestStreak = 0;
     let currentStreak = 1;
     for (let i = 1; i < sortedDates.length; i++) {
-      const diff = (sortedDates[i].getTime() - sortedDates[i - 1].getTime()) / (1000 * 3600 * 24);
+      const diff =
+        (sortedDates[i].getTime() - sortedDates[i - 1].getTime()) /
+        (1000 * 3600 * 24);
       if (diff === 1) {
         currentStreak++;
       } else {
@@ -268,41 +275,43 @@ const App: React.FC = () => {
     return longestStreak;
   };
 
-  // Get current week progress for a streak
-  const getWeekProgress = (streak: Streak) => {
-    const today = new Date();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay());
-    
-    const weekDates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(startOfWeek);
-      date.setDate(startOfWeek.getDate() + i);
-      weekDates.push(getDateString(date));
-    }
-    
-    const completedSet = new Set(streak.completedDates);
-    const completedThisWeek = weekDates.filter(date => completedSet.has(date));
-    
-    return {
-      completed: completedThisWeek.length,
-      total: weekDates.length,
-      percentage: Math.round((completedThisWeek.length / weekDates.length) * 100)
-    };
-  };
-
   // Render contribution graph for a streak
   const renderContributionGraph = (streak: Streak) => {
     const today = new Date();
     const year = today.getFullYear();
 
-    const completedSet = new Set(streak.completedDates.map((d) => new Date(d).toDateString()));
+    const completedSet = new Set(
+      streak.completedDates.map((d) => new Date(d).toDateString()),
+    );
 
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
 
     const monthDays = [
-      31, year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28,
-      31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+      31,
+      year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
     ];
 
     const daysNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -313,7 +322,9 @@ const App: React.FC = () => {
           <div className="grid-row grid-header">
             <div className="grid-month-label" />
             {daysNumbers.map((dayNum) => (
-              <div key={dayNum} className="grid-day-label">{dayNum}</div>
+              <div key={dayNum} className="grid-day-label">
+                {dayNum}
+              </div>
             ))}
           </div>
 
@@ -370,7 +381,36 @@ const App: React.FC = () => {
   };
 
   // Get the selected streak from the streaks array
-  const selectedStreak = streaks.find(s => s.id === selectedStreakId) || null;
+  const selectedStreak = streaks.find((s) => s.id === selectedStreakId) || null;
+
+  function toReadableDate(date: Date) {
+    return date.toDateString(); // "Sat Jan 24 2026"
+  }
+
+  function getWeekDaysStatus(streak: Streak) {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+
+    // Monday as start
+    const monday = new Date(today);
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    monday.setDate(today.getDate() + diff);
+
+    const days = ["M", "T", "W", "T", "F", "S", "S"];
+
+    return days.map((label, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      const dateString = toReadableDate(date);
+
+      return {
+        label,
+        dateString,
+        isToday: dateString === todayString,
+        completed: streak.completedDates.includes(dateString),
+      };
+    });
+  }
 
   // Render list view
   const renderListView = () => (
@@ -384,19 +424,18 @@ const App: React.FC = () => {
           {streaks.map((streak) => {
             const status = getStreakStatus(streak);
             const isCompletedToday = streak.lastCompleted === todayString;
-            const weekProgress = getWeekProgress(streak);
-            
+
             return (
               <article key={streak.id} className="streak-card">
                 <div className="streak-card-header">
-                  <div 
+                  <div
                     className="streak-emoji"
                     onClick={() => handleStreakClick(streak.id)}
                   >
                     {streak.emoji || "🔥"}
                   </div>
-                  
-                  <div 
+
+                  <div
                     className="streak-info"
                     onClick={() => handleStreakClick(streak.id)}
                   >
@@ -428,17 +467,18 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                <div className="week-progress">
-                  <div className="progress-info">
-                    <span>Week: {weekProgress.completed}/{weekProgress.total}</span>
-                    <span>{weekProgress.percentage}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill"
-                      style={{ width: `${weekProgress.percentage}%` }}
-                    />
-                  </div>
+                <div className="week-days">
+                  {getWeekDaysStatus(streak).map((day, index) => (
+                    <div
+                      key={index}
+                      className={`day-box 
+        ${day.completed ? "done" : "not-done"} 
+        ${day.isToday ? "today" : ""}`}
+        onClick={() => completeStreak(streak.id)}
+                    >
+                      {day.label}
+                    </div>
+                  ))}
                 </div>
               </article>
             );
@@ -451,7 +491,7 @@ const App: React.FC = () => {
   // Render detail view
   const renderDetailView = () => {
     if (!selectedStreak) return null;
-    
+
     const status = getStreakStatus(selectedStreak);
     const isCompletedToday = selectedStreak.lastCompleted === todayString;
 
