@@ -115,6 +115,33 @@ const App: React.FC = () => {
     );
   }
 
+  // Mark yesterday done if not already completed
+  function completeYesterdayStreak(id: number) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayString = yesterday.toISOString().split("T")[0];
+
+    setStreaks((prev) =>
+      prev.map((s) => {
+        if (s.id !== id) return s;
+
+        // If yesterday already completed, do nothing
+        if (s.completedDates.includes(yesterdayString)) return s;
+
+        // If today is already completed, avoid double increment
+        if (s.lastCompleted === todayString) return s;
+
+        return {
+          ...s,
+          count: s.count + 1,
+          lastCompleted: yesterdayString,
+          completedDates: [...s.completedDates, yesterdayString],
+        };
+      }),
+    );
+  }
+
+
   // Uncomplete streak for today only
   function uncompleteStreak(id: number) {
     setStreaks((prev) =>
@@ -433,12 +460,14 @@ const App: React.FC = () => {
         <button className="btn btn-back" onClick={handleBackToList}>
           ← Back to List
         </button>
-        
+
         <article className="streak-detail-card">
           <div className="streak-detail-header">
             <div>
               <div className="streak-detail-title">
-                <span className="streak-detail-emoji">{selectedStreak.emoji || "🔥"}</span>
+                <span className="streak-detail-emoji">
+                  {selectedStreak.emoji || "🔥"}
+                </span>
                 {selectedStreak.name}
               </div>
               {selectedStreak.description && (
@@ -469,7 +498,8 @@ const App: React.FC = () => {
 
           <div className="streak-detail-dates">
             Started: {new Date(selectedStreak.createdDate).toLocaleDateString()}
-            {selectedStreak.lastCompleted && ` | Last: ${new Date(selectedStreak.lastCompleted).toLocaleDateString()}`}
+            {selectedStreak.lastCompleted &&
+              ` | Last: ${new Date(selectedStreak.lastCompleted).toLocaleDateString()}`}
           </div>
 
           <div className="streak-detail-actions">
@@ -486,19 +516,33 @@ const App: React.FC = () => {
                   ↩️ Undo Today
                 </button>
               ) : (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => completeStreak(selectedStreak.id)}
-                  aria-label={`Complete streak ${selectedStreak.name} today`}
-                >
-                  ✅ Done
-                </button>
+                <>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => completeYesterdayStreak(selectedStreak.id)}
+                    aria-label={`Complete streak ${selectedStreak.name} today`}
+                  >
+                    ✅ Mark yesterday Done
+                  </button>
+
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => completeStreak(selectedStreak.id)}
+                    aria-label={`Complete streak ${selectedStreak.name} today`}
+                  >
+                    ✅ Done
+                  </button>
+                </>
               )}
 
               <button
                 className="btn btn-danger"
                 onClick={() => {
-                  if (window.confirm(`Delete streak "${selectedStreak.name}"? This cannot be undone.`)) {
+                  if (
+                    window.confirm(
+                      `Delete streak "${selectedStreak.name}"? This cannot be undone.`,
+                    )
+                  ) {
                     deleteStreak(selectedStreak.id);
                   }
                 }}
