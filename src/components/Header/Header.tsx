@@ -40,14 +40,14 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <nav className="streakit-navbar">
       <div className="nav-left">
-        <h1>🔥 Streak.it</h1>
+        <h1>🔥 Habits</h1>
       </div>
 
       <div className="add-streak-button">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="icon" className="add-streak">
-              Add Streak
+              Add Habit
             </Button>
           </DialogTrigger>
 
@@ -60,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({
               <form onSubmit={onSubmit} noValidate style={{paddingBottom: "20px"}}>
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="streakName">Streak Name</label>
+                    <label htmlFor="streakName">Habit Name</label>
                     <input
                       id="streakName"
                       type="text"
