@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Header from "./components/Header/Header";
+import Login from "./components/Login/Login";
+import { supabase } from "./lib/supabaseClient";
 import type { Streak } from "./models/streak.model";
 import "./App.css";
 
@@ -52,20 +54,13 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Load streaks from localStorage or empty array
-  const loadStreaks = (): Streak[] => {
-    try {
-      const saved = localStorage.getItem("streaks");
-      if (!saved) return [];
-      const parsed: Streak[] = JSON.parse(saved);
-      return parsed;
-    } catch {
-      return [];
-    }
-  };
+  // Authentication and Data Loading States
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
 
   // State
-  const [streaks, setStreaks] = useState<Streak[]>(loadStreaks);
+  const [streaks, setStreaks] = useState<Streak[]>([]);
   const [currentView, setCurrentView] = useState<View>("list");
   const [selectedStreakId, setSelectedStreakId] = useState<number | null>(null);
 
@@ -74,107 +69,270 @@ const App: React.FC = () => {
   const [description, setDescription] = useState("");
   const [emoji, setEmoji] = useState<string | undefined>("🔥");
 
-  // Save streaks to localStorage whenever streaks change
+  // Listen to Auth state changes
   useEffect(() => {
-    localStorage.setItem("streaks", JSON.stringify(streaks));
-  }, [streaks]);
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+      })
+      .catch((err) => {
+        console.error("Error getting session:", err);
+      })
+      .finally(() => {
+        setAuthLoading(false);
+      });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Fetch Streaks when user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchStreaks();
+    } else {
+      setStreaks([]);
+    }
+  }, [user]);
+
+  async function fetchStreaks() {
+    try {
+      setDataLoading(true);
+      const { data, error } = await supabase
+        .from("streaks")
+        .select("*")
+        .order("id", { ascending: true });
+      
+      if (error) throw error;
+
+      const mapped: Streak[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        count: row.count,
+        createdDate: row.created_date,
+        lastCompleted: row.last_completed,
+        completedDates: row.completed_dates || [],
+        emoji: row.emoji,
+      }));
+
+      setStreaks(mapped);
+    } catch (err) {
+      console.error("Error fetching streaks:", err);
+    } finally {
+      setDataLoading(false);
+    }
+  }
 
   // Add new streak handler
-  function handleAddStreak(e: React.FormEvent) {
+  async function handleAddStreak(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !user) return;
 
-    const newStreak: Streak = {
-      id: Date.now(),
+    const newStreak = {
+      user_id: user.id,
       name: name.trim(),
       description: description.trim() || "",
       count: 0,
-      createdDate: todayString,
-      lastCompleted: null,
-      completedDates: [],
+      created_date: todayString,
+      last_completed: null,
+      completed_dates: [],
       emoji: emoji || "🔥",
     };
 
-    setStreaks((prev) => [...prev, newStreak]);
-    setName("");
-    setDescription("");
+    try {
+      const { data, error } = await supabase
+        .from("streaks")
+        .insert([newStreak])
+        .select();
+      if (error) throw error;
+
+      if (data && data[0]) {
+        const row = data[0];
+        const added: Streak = {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          count: row.count,
+          createdDate: row.created_date,
+          lastCompleted: row.last_completed,
+          completedDates: row.completed_dates || [],
+          emoji: row.emoji,
+        };
+        setStreaks((prev) => [...prev, added]);
+      }
+      setName("");
+      setDescription("");
+    } catch (err) {
+      console.error("Error adding streak:", err);
+    }
   }
 
   // Complete streak today if not already completed
-  function completeStreak(id: number) {
-    setStreaks((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          if (s.lastCompleted === todayString) {
-            uncompleteStreak(id)
+  async function completeStreak(id: number) {
+    const streak = streaks.find((s) => s.id === id);
+    if (!streak) return;
+
+    const isCompletedToday = streak.lastCompleted === todayString;
+    
+    // Toggle completion
+    if (isCompletedToday) {
+      await uncompleteStreak(id);
+      return;
+    }
+
+    const newCount = streak.count + 1;
+    const newCompletedDates = [...streak.completedDates, todayString];
+
+    try {
+      // Optimistic Update
+      setStreaks((prev) =>
+        prev.map((s) => {
+          if (s.id === id) {
+            return {
+              ...s,
+              count: newCount,
+              lastCompleted: todayString,
+              completedDates: newCompletedDates,
+            };
           }
-          return {
-            ...s,
-            count: s.count + 1,
-            lastCompleted: todayString,
-            completedDates: [...s.completedDates, todayString],
-          };
-        }
-        return s;
-      }),
-    );
+          return s;
+        })
+      );
+
+      const { error } = await supabase
+        .from("streaks")
+        .update({
+          count: newCount,
+          last_completed: todayString,
+          completed_dates: newCompletedDates,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Error completing streak:", err);
+      fetchStreaks();
+    }
   }
 
   // Mark yesterday done if not already completed
-  function completeYesterdayStreak(id: number) {
+  async function completeYesterdayStreak(id: number) {
+    const streak = streaks.find((s) => s.id === id);
+    if (!streak) return;
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayString = getDateString(yesterday);
 
-    setStreaks((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
+    if (streak.completedDates.includes(yesterdayString)) return;
+    if (streak.lastCompleted === todayString) return;
 
-        // If yesterday already completed, do nothing
-        if (s.completedDates.includes(yesterdayString)) return s;
+    const newCount = streak.count + 1;
+    const newCompletedDates = [...streak.completedDates, yesterdayString];
 
-        // If today is already completed, avoid double increment
-        if (s.lastCompleted === todayString) return s;
+    try {
+      // Optimistic Update
+      setStreaks((prev) =>
+        prev.map((s) => {
+          if (s.id === id) {
+            return {
+              ...s,
+              count: newCount,
+              lastCompleted: yesterdayString,
+              completedDates: newCompletedDates,
+            };
+          }
+          return s;
+        })
+      );
 
-        return {
-          ...s,
-          count: s.count + 1,
-          lastCompleted: yesterdayString,
-          completedDates: [...s.completedDates, yesterdayString],
-        };
-      }),
-    );
+      const { error } = await supabase
+        .from("streaks")
+        .update({
+          count: newCount,
+          last_completed: yesterdayString,
+          completed_dates: newCompletedDates,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Error completing yesterday streak:", err);
+      fetchStreaks();
+    }
   }
 
   // Uncomplete streak for today only
-  function uncompleteStreak(id: number) {
-    setStreaks((prev) =>
-      prev.map((s) => {
-        if (s.id === id && s.lastCompleted === todayString) {
-          const updatedCompletedDates = s.completedDates.filter(
-            (date) => date !== todayString,
-          );
-          return {
-            ...s,
-            count: Math.max(0, s.count - 1),
-            lastCompleted:
-              updatedCompletedDates.length > 0
-                ? updatedCompletedDates[updatedCompletedDates.length - 1]
-                : null,
-            completedDates: updatedCompletedDates,
-          };
-        }
-        return s;
-      }),
+  async function uncompleteStreak(id: number) {
+    const streak = streaks.find((s) => s.id === id);
+    if (!streak || streak.lastCompleted !== todayString) return;
+
+    const updatedCompletedDates = streak.completedDates.filter(
+      (date) => date !== todayString
     );
+    const newCount = Math.max(0, streak.count - 1);
+    const newLastCompleted = updatedCompletedDates.length > 0
+      ? updatedCompletedDates[updatedCompletedDates.length - 1]
+      : null;
+
+    try {
+      // Optimistic Update
+      setStreaks((prev) =>
+        prev.map((s) => {
+          if (s.id === id) {
+            return {
+              ...s,
+              count: newCount,
+              lastCompleted: newLastCompleted,
+              completedDates: updatedCompletedDates,
+            };
+          }
+          return s;
+        })
+      );
+
+      const { error } = await supabase
+        .from("streaks")
+        .update({
+          count: newCount,
+          last_completed: newLastCompleted,
+          completed_dates: updatedCompletedDates,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Error uncompleting streak:", err);
+      fetchStreaks();
+    }
   }
 
   // Delete streak handler
-  function deleteStreak(id: number) {
-    setStreaks((prev) => prev.filter((s) => s.id !== id));
-    if (selectedStreakId === id) {
-      setSelectedStreakId(null);
-      setCurrentView("list");
+  async function deleteStreak(id: number) {
+    try {
+      // Optimistic Update
+      setStreaks((prev) => prev.filter((s) => s.id !== id));
+      if (selectedStreakId === id) {
+        setSelectedStreakId(null);
+        setCurrentView("list");
+      }
+
+      const { error } = await supabase
+        .from("streaks")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error("Error deleting streak:", err);
+      fetchStreaks();
     }
   }
 
@@ -597,6 +755,22 @@ const App: React.FC = () => {
     );
   };
 
+  if (authLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-glow"></div>
+        <div className="spinner-container">
+          <div className="premium-spinner"></div>
+          <p>Connecting to your habits...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
     <>
       <Header
@@ -607,8 +781,17 @@ const App: React.FC = () => {
         setDescription={setDescription}
         emoji={emoji}
         setEmoji={setEmoji}
+        user={user}
       />
-      {currentView === "list" ? renderListView() : renderDetailView()}
+      {dataLoading ? (
+        <div className="container" style={{ display: 'flex', justifyContent: 'center', padding: '100px 0' }}>
+          <div className="premium-spinner" style={{ width: '40px', height: '40px' }}></div>
+        </div>
+      ) : currentView === "list" ? (
+        renderListView()
+      ) : (
+        renderDetailView()
+      )}
     </>
   );
 };
